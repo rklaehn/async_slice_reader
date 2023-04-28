@@ -16,11 +16,12 @@ use std::pin::Pin;
 /// See xRead, xFileSize in https://www.sqlite.org/c3ref/io_methods.html
 #[allow(clippy::len_without_is_empty)]
 pub trait AsyncSliceReader {
+    type ReadResult<'r>: Future<Output = io::Result<()>> + 'r where Self: 'r;
     fn read<'a, 'b, 'r>(
         &'a mut self,
         offset: u64,
         buf: &'b mut [u8],
-    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'r>>
+    ) -> Self::ReadResult<'r>
     where
         Self: 'r,
         'a: 'r,
@@ -32,11 +33,12 @@ pub trait AsyncSliceReader {
 }
 
 impl<R: AsyncRead + AsyncSeek + Unpin + Send + Sync> AsyncSliceReader for R {
+    type ReadResult<'r> = Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'r>> where Self: 'r;
     fn read<'a, 'b, 'r>(
         &'a mut self,
         offset: u64,
         buf: &'b mut [u8],
-    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'r>>
+    ) -> Self::ReadResult<'r>
     where
         Self: 'r,
         'a: 'r,
